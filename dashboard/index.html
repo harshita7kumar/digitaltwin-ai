@@ -69,7 +69,11 @@
   @media (max-width:900px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
 
   /* ---------- station strip (signature element) ---------- */
-  .strip-wrap{overflow-x:auto; padding-bottom:6px;}
+  .strip-wrap{
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+  
   .strip{display:flex; gap:3px; min-width:920px;}
   .strip-zone{display:flex; flex-direction:column; gap:6px;}
   .strip-zone .zlabel{font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;}
@@ -83,12 +87,30 @@
   .cell.status-critical{background:var(--red); box-shadow:0 0 8px rgba(229,72,77,.5);}
   .cell.status-normal.tier-manual{background:repeating-linear-gradient(45deg,var(--bg-raised),var(--bg-raised) 3px,var(--bg-hover) 3px,var(--bg-hover) 6px);}
   .cell.status-normal.tier-basic{background:var(--blue-dim);}
-  .cell .tip{
-    display:none; position:absolute; bottom:42px; left:50%; transform:translateX(-50%);
-    background:#0c0f13; border:1px solid var(--line); border-radius:6px; padding:8px 10px;
-    font-size:11.5px; white-space:nowrap; z-index:10; box-shadow:0 6px 20px rgba(0,0,0,.4);
-  }
-  .cell:hover .tip{display:block;}
+  /* .cell .tip{
+  display:none;
+  position:absolute;
+  bottom:42px;
+  left:50%;
+  bottom:calc(100% + 10px);
+  transform:translateX(-50%);
+  background:#0c0f13;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:8px 10px;
+  font-size:11.5px;
+  white-space:nowrap;
+  z-index:9999;
+  box-shadow:0 6px 20px rgba(0,0,0,.4);
+
+  pointer-events:none;
+
+} */
+/* 
+.cell:hover .tip{
+  display:block;
+} */
+ 
   .tip b{color:var(--text-primary);}
   .tip .tag{font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); text-transform:uppercase;}
   .legend{display:flex; gap:18px; margin-top:12px; flex-wrap:wrap;}
@@ -141,6 +163,31 @@
   .callout b{color:#fff;}
 
   footer{padding:24px 28px 40px; text-align:center; color:var(--text-dim); font-size:11.5px; border-top:1px solid var(--line); margin-top:20px;}
+
+#station-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 99999;
+
+  background: #0c0f13;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #e8ecf1;
+  white-space: nowrap;
+
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  pointer-events: none;
+}
+
+#station-tooltip .tag {
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+}
 </style>
 </head>
 <body>
@@ -167,6 +214,8 @@
     <h2 class="section-title">Line status — all 40 stations</h2>
     <div class="panel">
       <div class="strip-wrap"><div class="strip" id="station-strip"></div></div>
+      <div id="station-tooltip"></div>
+
       <div class="legend">
         <span class="item"><span class="sw" style="background:var(--green-dim)"></span>Normal</span>
         <span class="item"><span class="sw" style="background:var(--red)"></span>Critical / alerting</span>
@@ -270,24 +319,92 @@ document.getElementById('switcher').addEventListener('click', (e) => {
 // ---------- floor view ----------
 const ZONE_ORDER = ["Body Construction","Paint","Final Assembly"];
 function renderStrip(){
+
   const strip = document.getElementById('station-strip');
+  const tooltip = document.getElementById('station-tooltip');
+
+  strip.innerHTML = '';
+
   const byZone = {};
-  DATA.floor_view.line_status.forEach(s=>{ (byZone[s.zone] ||= []).push(s); });
-  ZONE_ORDER.forEach(zone=>{
+
+  DATA.floor_view.line_status.forEach(s => {
+    (byZone[s.zone] ||= []).push(s);
+  });
+
+  ZONE_ORDER.forEach(zone => {
+
     const stations = byZone[zone] || [];
-    const zoneEl = document.createElement('div'); zoneEl.className='strip-zone';
+
+    const zoneEl = document.createElement('div');
+    zoneEl.className = 'strip-zone';
+
     zoneEl.innerHTML = `<div class="zlabel">${zone}</div>`;
-    const cells = document.createElement('div'); cells.className='cells';
-    stations.forEach(s=>{
+
+    const cells = document.createElement('div');
+    cells.className = 'cells';
+
+    stations.forEach(s => {
+
       const c = document.createElement('div');
+
       c.className = `cell status-${s.status} tier-${s.tier}`;
-      c.innerHTML = `<div class="tip"><span class="tag">St.${s.station_id} · ${s.tier}</span><br><b>${s.name}</b></div>`;
+
       cells.appendChild(c);
+
+      c.addEventListener('mouseenter', () => {
+
+        tooltip.innerHTML = `
+          <span class="tag">St.${s.station_id} · ${s.tier}</span><br>
+          <b>${s.name}</b>
+        `;
+
+        const rect = c.getBoundingClientRect();
+
+        tooltip.style.display = 'block';
+
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        let left = rect.left + rect.width / 2;
+        let top = rect.top - 10;
+
+        // Keep tooltip inside the browser window horizontally
+        const halfWidth = tooltipRect.width / 2;
+
+        if (left - halfWidth < 8) {
+          left = halfWidth + 8;
+        }
+
+        if (left + halfWidth > window.innerWidth - 8) {
+          left = window.innerWidth - halfWidth - 8;
+        }
+
+        // Put below the station if there isn't enough room above
+        if (top - tooltipRect.height < 8) {
+          top = rect.bottom + 10;
+          tooltip.style.transform = 'translateX(-50%)';
+        } else {
+          tooltip.style.transform = 'translate(-50%, -100%)';
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+
+      });
+
+      c.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+
     });
+
     zoneEl.appendChild(cells);
     strip.appendChild(zoneEl);
+
   });
+
 }
+
+
 
 function renderAlerts(){
   const list = document.getElementById('alerts-list');
