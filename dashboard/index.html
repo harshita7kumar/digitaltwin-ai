@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DigitalTwin.ai — Line 3 Assembly Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg-deep:#12161c; --bg-panel:#1b212a; --bg-raised:#232b36; --bg-hover:#2a333f;
+    --line:#313a46; --line-soft:#252d38;
+    --text-primary:#e8ecf1; --text-muted:#8a96a3; --text-dim:#5b6672;
+    --amber:#f5a623; --green:#3dd68c; --red:#e5484d; --blue:#4c9fe8;
+    --amber-dim:#4a3a1c; --green-dim:#1a3a2c; --red-dim:#3d1f21; --blue-dim:#1c2e40;
+    --radius:6px;
+    --font-ui:'IBM Plex Sans',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg-deep); color:var(--text-primary);
+    font-family:var(--font-ui); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber); color:#12161c;}
+
+  /* ---------- header / persona switcher ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 28px; border-bottom:1px solid var(--line); gap:20px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px;}
+  .brand .mark{
+    font-family:var(--font-mono); font-weight:600; font-size:13px; letter-spacing:0.06em;
+    color:var(--bg-deep); background:var(--amber); padding:3px 7px; border-radius:4px;
+  }
+  .brand h1{font-size:16px; font-weight:600; margin:0;}
+  .brand .sub{color:var(--text-muted); font-size:12.5px;}
+
+  .switcher{display:flex; background:var(--bg-panel); border:1px solid var(--line); border-radius:8px; padding:3px; gap:2px;}
+  .switcher button{
+    font-family:var(--font-ui); font-size:12.5px; font-weight:600; letter-spacing:0.02em;
+    color:var(--text-muted); background:transparent; border:none; border-radius:6px;
+    padding:8px 16px; cursor:pointer; transition:background .15s, color .15s;
+  }
+  .switcher button.active{background:var(--bg-raised); color:var(--text-primary); box-shadow:inset 0 0 0 1px var(--line);}
+  .switcher button:hover:not(.active){color:var(--text-primary);}
+  .switcher .dot{display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:7px; background:var(--text-dim);}
+  .switcher button.active .dot{background:var(--amber);}
+
+  main{padding:24px 28px 60px; max-width:1320px; margin:0 auto;}
+  .view{display:none; animation:fade .25s ease;}
+  .view.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  h2.section-title{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.09em; color:var(--text-muted);
+    font-weight:600; margin:32px 0 12px; display:flex; align-items:center; gap:8px;
+  }
+  h2.section-title:first-child{margin-top:0;}
+  h2.section-title::after{content:''; flex:1; height:1px; background:var(--line);}
+
+  .panel{background:var(--bg-panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
+  .grid{display:grid; gap:14px;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:900px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
+
+  /* ---------- station strip (signature element) ---------- */
+  .strip-wrap{overflow-x:auto; padding-bottom:6px;}
+  .strip{display:flex; gap:3px; min-width:920px;}
+  .strip-zone{display:flex; flex-direction:column; gap:6px;}
+  .strip-zone .zlabel{font-family:var(--font-mono); font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;}
+  .strip-zone .cells{display:flex; gap:3px;}
+  .cell{
+    width:20px; height:34px; border-radius:3px; position:relative; cursor:pointer;
+    background:var(--green-dim); border:1px solid var(--line);
+    transition:transform .1s;
+  }
+  .cell:hover{transform:translateY(-2px);}
+  .cell.status-critical{background:var(--red); box-shadow:0 0 8px rgba(229,72,77,.5);}
+  .cell.status-normal.tier-manual{background:repeating-linear-gradient(45deg,var(--bg-raised),var(--bg-raised) 3px,var(--bg-hover) 3px,var(--bg-hover) 6px);}
+  .cell.status-normal.tier-basic{background:var(--blue-dim);}
+  .cell .tip{
+    display:none; position:absolute; bottom:42px; left:50%; transform:translateX(-50%);
+    background:#0c0f13; border:1px solid var(--line); border-radius:6px; padding:8px 10px;
+    font-size:11.5px; white-space:nowrap; z-index:10; box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  .cell:hover .tip{display:block;}
+  .tip b{color:var(--text-primary);}
+  .tip .tag{font-family:var(--font-mono); font-size:9.5px; color:var(--text-muted); text-transform:uppercase;}
+  .legend{display:flex; gap:18px; margin-top:12px; flex-wrap:wrap;}
+  .legend .item{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-muted);}
+  .legend .sw{width:12px; height:12px; border-radius:3px; display:inline-block;}
+
+  /* ---------- alerts ---------- */
+  .alert{
+    display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:var(--radius);
+    border:1px solid var(--line); margin-bottom:10px; background:var(--bg-raised);
+  }
+  .alert.sev-high{border-left:3px solid var(--red);}
+  .alert.sev-medium{border-left:3px solid var(--amber);}
+  .alert .badge{
+    font-family:var(--font-mono); font-size:10px; font-weight:600; padding:3px 7px; border-radius:4px;
+    text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; margin-top:1px;
+  }
+  .alert.sev-high .badge{background:var(--red-dim); color:#ff9a9d;}
+  .alert.sev-medium .badge{background:var(--amber-dim); color:#ffcb7a;}
+  .alert p{margin:0; color:var(--text-primary);}
+  .no-alerts{color:var(--text-muted); font-size:13px; padding:8px 2px;}
+
+  /* ---------- stats ---------- */
+  .stat{background:var(--bg-panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px;}
+  .stat .label{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;}
+  .stat .value{font-family:var(--font-mono); font-size:26px; font-weight:600; color:var(--text-primary);}
+  .stat .value.accent-amber{color:var(--amber);}
+  .stat .value.accent-green{color:var(--green);}
+  .stat .value.accent-red{color:var(--red);}
+  .stat .caption{font-size:11.5px; color:var(--text-dim); margin-top:6px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th{text-align:left; font-weight:600; color:var(--text-muted); text-transform:uppercase; font-size:10.5px; letter-spacing:.05em; padding:6px 10px; border-bottom:1px solid var(--line);}
+  td{padding:9px 10px; border-bottom:1px solid var(--line-soft); font-family:var(--font-mono); font-size:12px;}
+  td.name{font-family:var(--font-ui); font-size:12.5px;}
+  tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block; padding:2px 8px; border-radius:99px; font-size:10.5px; font-family:var(--font-mono);}
+  .pill.on{background:var(--red-dim); color:#ff9a9d;}
+  .pill.off{background:var(--green-dim); color:#7fe0af;}
+
+  .chart-box{position:relative; height:220px;}
+  .chart-box.tall{height:280px;}
+
+  .assumptions{list-style:none; margin:0; padding:0; display:grid; gap:8px;}
+  .assumptions li{display:flex; justify-content:space-between; font-size:12.5px; padding:8px 0; border-bottom:1px solid var(--line-soft);}
+  .assumptions li span:first-child{color:var(--text-muted);}
+  .assumptions li span:last-child{font-family:var(--font-mono); color:var(--text-primary);}
+
+  .callout{background:var(--blue-dim); border:1px solid #2b4f6e; border-radius:var(--radius); padding:14px 16px; font-size:12.5px; color:#bcdcf5; margin-top:14px;}
+  .callout b{color:#fff;}
+
+  footer{padding:24px 28px 40px; text-align:center; color:var(--text-dim); font-size:11.5px; border-top:1px solid var(--line); margin-top:20px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">DT</span>
+    <div>
+      <h1>DigitalTwin.ai — Line 3 Assembly Twin</h1>
+      <div class="sub">40 stations · Body → Paint → Final Assembly · simulated production data</div>
+    </div>
+  </div>
+  <div class="switcher" id="switcher">
+    <button data-view="floor" class="active"><span class="dot"></span>Floor Supervisor</button>
+    <button data-view="plant"><span class="dot"></span>Plant Manager</button>
+    <button data-view="leadership"><span class="dot"></span>Leadership</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ FLOOR SUPERVISOR VIEW ============ -->
+  <section class="view active" id="view-floor">
+    <h2 class="section-title">Line status — all 40 stations</h2>
+    <div class="panel">
+      <div class="strip-wrap"><div class="strip" id="station-strip"></div></div>
+      <div class="legend">
+        <span class="item"><span class="sw" style="background:var(--green-dim)"></span>Normal</span>
+        <span class="item"><span class="sw" style="background:var(--red)"></span>Critical / alerting</span>
+        <span class="item"><span class="sw" style="background:var(--blue-dim)"></span>Basic sensor (cycle time only)</span>
+        <span class="item"><span class="sw" style="background:repeating-linear-gradient(45deg,#232b36,#232b36 2px,#2a333f 2px,#2a333f 4px)"></span>Manual checklist (no sensor)</span>
+      </div>
+    </div>
+
+    <h2 class="section-title">Active alerts, this shift</h2>
+    <div id="alerts-list"></div>
+
+    <h2 class="section-title">Shift snapshot</h2>
+    <div class="grid grid-3">
+      <div class="stat"><div class="label">Units this shift (last 300)</div><div class="value" id="stat-shift-defect">—</div><div class="caption">confirmed / suspected defect rate</div></div>
+      <div class="stat"><div class="label">Stations currently alerting</div><div class="value accent-amber" id="stat-alert-count">—</div><div class="caption">bottleneck or manual-risk flags active</div></div>
+      <div class="stat"><div class="label">Sensor coverage</div><div class="value" id="stat-coverage">—</div><div class="caption" id="stat-coverage-caption">rich / basic / manual stations</div></div>
+    </div>
+  </section>
+
+  <!-- ============ PLANT MANAGER VIEW ============ -->
+  <section class="view" id="view-plant">
+    <h2 class="section-title">Defect rate trend, by shift block</h2>
+    <div class="panel"><div class="chart-box"><canvas id="chart-trend"></canvas></div></div>
+
+    <h2 class="section-title">Station utilization vs. takt time</h2>
+    <div class="panel"><div class="chart-box tall"><canvas id="chart-util"></canvas></div></div>
+
+    <div class="grid grid-2" style="margin-top:24px;">
+      <div>
+        <h2 class="section-title">Top root-cause contributors</h2>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Station</th><th>Contribution score</th><th>Confidence</th></tr></thead>
+            <tbody id="table-rootcause"></tbody>
+          </table>
+          <div class="callout" id="rootcause-caption"></div>
+        </div>
+      </div>
+      <div>
+        <h2 class="section-title">Bottleneck watchlist</h2>
+        <div class="panel">
+          <table>
+            <thead><tr><th>Station</th><th>Zone</th><th>Forecast</th><th>Status</th></tr></thead>
+            <tbody id="table-bottleneck"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LEADERSHIP VIEW ============ -->
+  <section class="view" id="view-leadership">
+    <h2 class="section-title">Pilot-line business case (illustrative)</h2>
+    <div class="grid grid-4">
+      <div class="stat"><div class="label">Est. year-1 net</div><div class="value accent-green" id="lead-net">—</div></div>
+      <div class="stat"><div class="label">Payback period</div><div class="value" id="lead-payback">—</div></div>
+      <div class="stat"><div class="label">Defects avoided / yr</div><div class="value" id="lead-defects">—</div></div>
+      <div class="stat"><div class="label">Downtime savings / yr</div><div class="value" id="lead-downtime">—</div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:24px;">
+      <div>
+        <h2 class="section-title">Stated assumptions</h2>
+        <div class="panel"><ul class="assumptions" id="assumptions-list"></ul></div>
+      </div>
+      <div>
+        <h2 class="section-title">Alert threshold: precision vs. recall</h2>
+        <div class="panel">
+          <div class="chart-box"><canvas id="chart-sweep"></canvas></div>
+          <div class="callout"><b>Why this matters:</b> a floor team loses trust fast if alerts cry wolf. The rollout plan starts at a conservative, high-precision threshold and only loosens it as confirmed accuracy builds a track record — see the roadmap in the business proposal.</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Validation summary</h2>
+    <div class="panel grid grid-3">
+      <div><div class="label" style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Early-warning precision</div><div class="value" style="font-family:var(--font-mono);font-size:20px;" id="val-precision">—</div></div>
+      <div><div class="label" style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Root-cause top-3 accuracy</div><div class="value" style="font-family:var(--font-mono);font-size:20px;" id="val-rootcause">—</div></div>
+      <div><div class="label" style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Bottleneck lead time (case study)</div><div class="value" style="font-family:var(--font-mono);font-size:20px;" id="val-leadtime">—</div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Prototype demo — all production data is simulated (see <code>src/simulate_line.py</code>). Business-case figures are illustrative, derived from stated assumptions, not customer data.
+</footer>
+
+<script>
+const DATA = {"meta": {"n_stations": 40, "n_units_simulated": 3000, "sensor_mix": {"rich": 27, "basic": 8, "manual": 5}}, "floor_view": {"line_status": [{"station_id": 1, "name": "Underbody Framing", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 2, "name": "Side Panel Load", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 3, "name": "Robotic Weld Cell A", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 4, "name": "Robotic Weld Cell B", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 5, "name": "Roof Bow Fit", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 6, "name": "Door Hang", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 7, "name": "Bolt Fastening Torque", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 8, "name": "Geometry Check", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 9, "name": "Robotic Weld Cell C", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 10, "name": "Sealer Application", "zone": "Body Construction", "tier": "rich", "status": "normal"}, {"station_id": 11, "name": "Body Squareness Gauge", "zone": "Body Construction", "tier": "basic", "status": "normal"}, {"station_id": 12, "name": "Weld Arm Bearing Station", "zone": "Body Construction", "tier": "rich", "status": "critical"}, {"station_id": 13, "name": "Panel Fit Inspection", "zone": "Body Construction", "tier": "manual", "status": "critical"}, {"station_id": 14, "name": "Hem Flange Press", "zone": "Body Construction", "tier": "basic", "status": "normal"}, {"station_id": 15, "name": "Body-in-White Buyoff", "zone": "Body Construction", "tier": "manual", "status": "normal"}, {"station_id": 16, "name": "Pretreatment Dip", "zone": "Paint", "tier": "basic", "status": "normal"}, {"station_id": 17, "name": "E-Coat Bath", "zone": "Paint", "tier": "rich", "status": "normal"}, {"station_id": 18, "name": "Sealer Booth", "zone": "Paint", "tier": "manual", "status": "normal"}, {"station_id": 19, "name": "Primer Booth", "zone": "Paint", "tier": "rich", "status": "normal"}, {"station_id": 20, "name": "Basecoat Robot", "zone": "Paint", "tier": "rich", "status": "normal"}, {"station_id": 21, "name": "Clearcoat Robot", "zone": "Paint", "tier": "rich", "status": "normal"}, {"station_id": 22, "name": "Flash-Off Tunnel", "zone": "Paint", "tier": "basic", "status": "normal"}, {"station_id": 23, "name": "Cure Oven Conveyor", "zone": "Paint", "tier": "basic", "status": "normal"}, {"station_id": 24, "name": "Paint Inspection Booth", "zone": "Paint", "tier": "manual", "status": "normal"}, {"station_id": 25, "name": "Buff & Polish", "zone": "Paint", "tier": "basic", "status": "normal"}, {"station_id": 26, "name": "Cockpit Marriage", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 27, "name": "Powertrain Marriage", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 28, "name": "Wheel & Tire Mount", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 29, "name": "Interior Trim 1", "zone": "Final Assembly", "tier": "basic", "status": "normal"}, {"station_id": 30, "name": "Interior Trim Fit Check", "zone": "Final Assembly", "tier": "manual", "status": "normal"}, {"station_id": 31, "name": "Glass Install", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 32, "name": "Seat Install", "zone": "Final Assembly", "tier": "basic", "status": "normal"}, {"station_id": 33, "name": "Fluid Fill", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 34, "name": "Wheel Alignment", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 35, "name": "Headlamp Aim", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 36, "name": "Electrical Function Test", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 37, "name": "Door/Panel Gap Scan", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 38, "name": "Water Leak Test", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 39, "name": "Road Simulation Test", "zone": "Final Assembly", "tier": "rich", "status": "normal"}, {"station_id": 40, "name": "Final Inspection & Buyoff", "zone": "Final Assembly", "tier": "rich", "status": "normal"}], "active_alerts": [{"type": "bottleneck", "station_id": 12, "station_name": "Weld Arm Bearing Station", "message": "Weld Arm Bearing Station (Station 12) is currently trending at or above takt time -- schedule maintenance window", "severity": "high"}, {"type": "manual_station_risk", "station_id": 13, "message": "Station 13 (manual checklist): Night shift showing an elevated confirmed-defect attribution rate (z=3.0) -- recommend a spot audit", "severity": "medium"}], "shift_defect_rate_last_300": 0.05333333333333334}, "plant_manager_view": {"weekly_trend": [{"shift_bucket": 1, "units": 250, "defect_rate": 0.0}, {"shift_bucket": 2, "units": 250, "defect_rate": 0.032}, {"shift_bucket": 3, "units": 250, "defect_rate": 0.008}, {"shift_bucket": 4, "units": 250, "defect_rate": 0.028}, {"shift_bucket": 5, "units": 250, "defect_rate": 0.004}, {"shift_bucket": 6, "units": 250, "defect_rate": 0.032}, {"shift_bucket": 7, "units": 250, "defect_rate": 0.016}, {"shift_bucket": 8, "units": 250, "defect_rate": 0.024}, {"shift_bucket": 9, "units": 250, "defect_rate": 0.012}, {"shift_bucket": 10, "units": 250, "defect_rate": 0.02}, {"shift_bucket": 11, "units": 250, "defect_rate": 0.032}, {"shift_bucket": 12, "units": 250, "defect_rate": 0.04}], "station_utilization": [{"station_id": 12, "name": "Weld Arm Bearing Station", "utilization": 0.951}, {"station_id": 32, "name": "Seat Install", "utilization": 0.921}, {"station_id": 38, "name": "Water Leak Test", "utilization": 0.921}, {"station_id": 39, "name": "Road Simulation Test", "utilization": 0.921}, {"station_id": 2, "name": "Side Panel Load", "utilization": 0.92}, {"station_id": 3, "name": "Robotic Weld Cell A", "utilization": 0.92}, {"station_id": 4, "name": "Robotic Weld Cell B", "utilization": 0.92}, {"station_id": 6, "name": "Door Hang", "utilization": 0.92}, {"station_id": 9, "name": "Robotic Weld Cell C", "utilization": 0.92}, {"station_id": 10, "name": "Sealer Application", "utilization": 0.92}, {"station_id": 11, "name": "Body Squareness Gauge", "utilization": 0.92}, {"station_id": 16, "name": "Pretreatment Dip", "utilization": 0.92}], "top_root_cause_contributors": [{"station_id": 7, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 2.194376041924707, "mean_anomaly_normal": 0.6711467700690076, "contribution_score": 1.2975578605016749}, {"station_id": 6, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 0.7696783907667353, "mean_anomaly_normal": 0.6849483618847958, "contribution_score": 0.2963412095177612}, {"station_id": 34, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 0.7436400100045223, "mean_anomaly_normal": 0.6778698324274522, "contribution_score": 0.22708506932771366}, {"station_id": 9, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 0.7311307924451486, "mean_anomaly_normal": 0.6743503745626502, "contribution_score": 0.20815696889104268}, {"station_id": 21, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 0.6728460468921686, "mean_anomaly_normal": 0.6183997760595825, "contribution_score": 0.19872690932640003}, {"station_id": 3, "n_defective_obs": 62, "n_normal_obs": 2938, "mean_anomaly_defective": 0.7356841978983555, "mean_anomaly_normal": 0.6846218081179342, "contribution_score": 0.19304866800106774}], "root_cause_accuracy": {"n_evaluated": 62, "top1_accuracy": 0.6451612903225806, "top3_accuracy": 0.6935483870967742}, "bottleneck_watchlist": [{"station_id": 12, "station_name": "Weld Arm Bearing Station", "zone": "Body Construction", "forecast_units_to_breach": 0.0, "currently_alerting": true}, {"station_id": 1, "station_name": "Underbody Framing", "zone": "Body Construction", "forecast_units_to_breach": null, "currently_alerting": false}, {"station_id": 2, "station_name": "Side Panel Load", "zone": "Body Construction", "forecast_units_to_breach": null, "currently_alerting": false}, {"station_id": 3, "station_name": "Robotic Weld Cell A", "zone": "Body Construction", "forecast_units_to_breach": null, "currently_alerting": false}, {"station_id": 4, "station_name": "Robotic Weld Cell B", "zone": "Body Construction", "forecast_units_to_breach": null, "currently_alerting": false}, {"station_id": 5, "station_name": "Roof Bow Fit", "zone": "Body Construction", "forecast_units_to_breach": null, "currently_alerting": false}]}, "leadership_view": {"business_case": {"assumptions": {"annual_units": 125000, "cost_per_escaped_defect_usd": 1200, "cost_per_hour_unplanned_downtime_usd": 15000, "unplanned_stoppage_hours_avoided_per_year": 16, "detection_recall_at_high_precision_threshold": 0.32, "prototype_dev_cost_usd": 180000, "per_line_rollout_cost_usd": 240000, "annual_platform_cost_per_line_usd": 60000}, "simulated_defect_rate": 0.020666666666666667, "estimated_defects_avoided_per_year": 827, "estimated_annual_defect_cost_savings_usd": 992000, "estimated_annual_downtime_savings_usd": 240000, "year1_total_cost_usd": 480000, "year1_net_usd": 752000, "estimated_payback_months": 4.7}, "validation_summary": {"early_warning_precision_at_default_threshold": 0.48148148148148145, "early_warning_recall_at_default_threshold": 0.41935483870967744, "threshold_sweep": [{"cutoff_station": 30, "threshold": 1.5, "true_positives": 48, "false_positives": 1326, "false_negatives": 14, "true_negatives": 1612, "precision": 0.034934497816593885, "recall": 0.7741935483870968, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 1.8, "true_positives": 34, "false_positives": 286, "false_negatives": 28, "true_negatives": 2652, "precision": 0.10625, "recall": 0.5483870967741935, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 2.0, "true_positives": 28, "false_positives": 64, "false_negatives": 34, "true_negatives": 2874, "precision": 0.30434782608695654, "recall": 0.45161290322580644, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 2.2, "true_positives": 26, "false_positives": 28, "false_negatives": 36, "true_negatives": 2910, "precision": 0.48148148148148145, "recall": 0.41935483870967744, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 2.5, "true_positives": 24, "false_positives": 10, "false_negatives": 38, "true_negatives": 2928, "precision": 0.7058823529411765, "recall": 0.3870967741935484, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 2.8, "true_positives": 23, "false_positives": 4, "false_negatives": 39, "true_negatives": 2934, "precision": 0.8518518518518519, "recall": 0.3709677419354839, "base_rate_defect": 0.020666666666666667}, {"cutoff_station": 30, "threshold": 3.2, "true_positives": 20, "false_positives": 1, "false_negatives": 42, "true_negatives": 2937, "precision": 0.9523809523809523, "recall": 0.3225806451612903, "base_rate_defect": 0.020666666666666667}], "root_cause_top3_accuracy": 0.6935483870967742, "bottleneck_lead_time_units_station12_case_study": 517}}};
+
+// ---------- persona switcher ----------
+document.getElementById('switcher').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  document.querySelectorAll('.switcher button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+btn.dataset.view).classList.add('active');
+});
+
+// ---------- floor view ----------
+const ZONE_ORDER = ["Body Construction","Paint","Final Assembly"];
+function renderStrip(){
+  const strip = document.getElementById('station-strip');
+  const byZone = {};
+  DATA.floor_view.line_status.forEach(s=>{ (byZone[s.zone] ||= []).push(s); });
+  ZONE_ORDER.forEach(zone=>{
+    const stations = byZone[zone] || [];
+    const zoneEl = document.createElement('div'); zoneEl.className='strip-zone';
+    zoneEl.innerHTML = `<div class="zlabel">${zone}</div>`;
+    const cells = document.createElement('div'); cells.className='cells';
+    stations.forEach(s=>{
+      const c = document.createElement('div');
+      c.className = `cell status-${s.status} tier-${s.tier}`;
+      c.innerHTML = `<div class="tip"><span class="tag">St.${s.station_id} · ${s.tier}</span><br><b>${s.name}</b></div>`;
+      cells.appendChild(c);
+    });
+    zoneEl.appendChild(cells);
+    strip.appendChild(zoneEl);
+  });
+}
+
+function renderAlerts(){
+  const list = document.getElementById('alerts-list');
+  const alerts = DATA.floor_view.active_alerts;
+  if(!alerts.length){ list.innerHTML = '<div class="no-alerts">No active alerts — line running within normal parameters.</div>'; return; }
+  list.innerHTML = alerts.map(a=>`
+    <div class="alert sev-${a.severity}">
+      <span class="badge">${a.severity}</span>
+      <p>${a.message}</p>
+    </div>`).join('');
+}
+
+function renderShiftStats(){
+  const rate = DATA.floor_view.shift_defect_rate_last_300;
+  document.getElementById('stat-shift-defect').textContent = rate!=null ? (rate*100).toFixed(2)+'%' : '—';
+  document.getElementById('stat-alert-count').textContent = DATA.floor_view.active_alerts.length;
+  const mix = DATA.meta.sensor_mix;
+  document.getElementById('stat-coverage').textContent = `${mix.rich}/${mix.basic}/${mix.manual}`;
+}
+
+// ---------- plant manager view ----------
+function renderTrendChart(){
+  const trend = DATA.plant_manager_view.weekly_trend;
+  new Chart(document.getElementById('chart-trend'), {
+    type:'line',
+    data:{
+      labels: trend.map(t=>`Block ${t.shift_bucket}`),
+      datasets:[{
+        label:'Defect rate', data: trend.map(t=>+(t.defect_rate*100).toFixed(2)),
+        borderColor:'#f5a623', backgroundColor:'rgba(245,166,35,0.12)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#f5a623'
+      }]
+    },
+    options: baseChartOpts('%')
+  });
+}
+
+function renderUtilChart(){
+  const util = DATA.plant_manager_view.station_utilization;
+  new Chart(document.getElementById('chart-util'), {
+    type:'bar',
+    data:{
+      labels: util.map(u=>`St.${u.station_id}`),
+      datasets:[{
+        label:'Utilization vs takt', data: util.map(u=>+(u.utilization*100).toFixed(1)),
+        backgroundColor: util.map(u=>u.utilization>0.93 ? '#e5484d' : '#4c9fe8'),
+        borderRadius:3, maxBarThickness:26
+      }]
+    },
+    options: {...baseChartOpts('%'), indexAxis:'x'}
+  });
+}
+
+function renderRootCauseTable(){
+  const rows = DATA.plant_manager_view.top_root_cause_contributors;
+  document.getElementById('table-rootcause').innerHTML = rows.map(r=>{
+    const conf = r.contribution_score>0.8 ? 'High' : r.contribution_score>0.3 ? 'Moderate' : 'Low';
+    return `<tr><td class="name">Station ${r.station_id}</td><td>${r.contribution_score.toFixed(2)}</td><td>${conf}</td></tr>`;
+  }).join('');
+  const acc = DATA.plant_manager_view.root_cause_accuracy;
+  document.getElementById('rootcause-caption').innerHTML =
+    `<b>Top-3 accuracy: ${(acc.top3_accuracy*100).toFixed(0)}%</b> against confirmed teardown findings (n=${acc.n_evaluated} defects). The remaining gap is concentrated at fully-manual stations with no sensor trail — see the manual-station retrofit recommendation in the business proposal.`;
+}
+
+function renderBottleneckTable(){
+  const rows = DATA.plant_manager_view.bottleneck_watchlist;
+  document.getElementById('table-bottleneck').innerHTML = rows.map(r=>{
+    const forecast = r.forecast_units_to_breach!=null
+      ? (r.forecast_units_to_breach>0 ? `~${Math.round(r.forecast_units_to_breach)} units` : 'At/over takt')
+      : 'No trend';
+    return `<tr>
+      <td class="name">${r.station_name}</td>
+      <td>${r.zone.split(' ')[0]}</td>
+      <td>${forecast}</td>
+      <td><span class="pill ${r.currently_alerting?'on':'off'}">${r.currently_alerting?'ALERTING':'OK'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- leadership view ----------
+function renderLeadership(){
+  const bc = DATA.leadership_view.business_case;
+  document.getElementById('lead-net').textContent = fmtUsd(bc.year1_net_usd);
+  document.getElementById('lead-payback').textContent = bc.estimated_payback_months + ' mo';
+  document.getElementById('lead-defects').textContent = bc.estimated_defects_avoided_per_year.toLocaleString();
+  document.getElementById('lead-downtime').textContent = fmtUsd(bc.estimated_annual_downtime_savings_usd);
+
+  const labelMap = {
+    annual_units:'Annual units (pilot line)', cost_per_escaped_defect_usd:'Cost per escaped defect',
+    cost_per_hour_unplanned_downtime_usd:'Cost per hr unplanned downtime',
+    unplanned_stoppage_hours_avoided_per_year:'Stoppage hrs avoided / yr',
+    detection_recall_at_high_precision_threshold:'Recall used (high-precision op. point)',
+    prototype_dev_cost_usd:'Prototype / pilot dev cost (one-time)',
+    per_line_rollout_cost_usd:'Per-line rollout cost (one-time)',
+    annual_platform_cost_per_line_usd:'Annual platform cost / line',
+  };
+  const ul = document.getElementById('assumptions-list');
+  ul.innerHTML = Object.entries(bc.assumptions).map(([k,v])=>{
+    const isUsd = k.includes('usd'); const isPct = k.includes('recall');
+    const val = isUsd ? fmtUsd(v) : isPct ? (v*100).toFixed(0)+'%' : v.toLocaleString();
+    return `<li><span>${labelMap[k]||k}</span><span>${val}</span></li>`;
+  }).join('');
+
+  const vs = DATA.leadership_view.validation_summary;
+  document.getElementById('val-precision').textContent = (vs.early_warning_precision_at_default_threshold*100).toFixed(0)+'% / '+(vs.early_warning_recall_at_default_threshold*100).toFixed(0)+'% recall';
+  document.getElementById('val-rootcause').textContent = (vs.root_cause_top3_accuracy*100).toFixed(0)+'%';
+  document.getElementById('val-leadtime').textContent = vs.bottleneck_lead_time_units_station12_case_study + ' units (~' + (vs.bottleneck_lead_time_units_station12_case_study/250).toFixed(1) + ' shifts)';
+
+  new Chart(document.getElementById('chart-sweep'), {
+    type:'line',
+    data:{
+      labels: vs.threshold_sweep.map(t=>t.threshold),
+      datasets:[
+        {label:'Precision', data: vs.threshold_sweep.map(t=>+(t.precision*100).toFixed(1)), borderColor:'#3dd68c', backgroundColor:'transparent', tension:.3, pointRadius:3},
+        {label:'Recall', data: vs.threshold_sweep.map(t=>+(t.recall*100).toFixed(1)), borderColor:'#4c9fe8', backgroundColor:'transparent', tension:.3, pointRadius:3},
+      ]
+    },
+    options: {...baseChartOpts('%'), plugins:{legend:{display:true, labels:{color:'#8a96a3', boxWidth:12, font:{family:"'IBM Plex Sans'",size:11}}}}}
+  });
+}
+
+// ---------- helpers ----------
+function fmtUsd(v){ return '$'+Math.round(v).toLocaleString(); }
+function baseChartOpts(suffix){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ ticks:{color:'#8a96a3', font:{family:"'IBM Plex Mono'", size:10.5}}, grid:{color:'#252d38'} },
+      y:{ ticks:{color:'#8a96a3', font:{family:"'IBM Plex Mono'", size:10.5}, callback:v=>v+suffix}, grid:{color:'#252d38'} }
+    }
+  };
+}
+
+// ---------- init ----------
+renderStrip(); renderAlerts(); renderShiftStats();
+renderTrendChart(); renderUtilChart(); renderRootCauseTable(); renderBottleneckTable();
+renderLeadership();
+</script>
+</body>
+</html>
