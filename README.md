@@ -7,7 +7,7 @@ stations — rather than an idealized, uniformly-instrumented one.
 **Round 2 submission.** Full write-up: [`docs/DigitalTwin_Business_Proposal.docx`](docs/DigitalTwin_Business_Proposal.docx)
 (also available as [PDF](docs/DigitalTwin_Business_Proposal.pdf)).
 
-▶️ **Demo video:** `<https://drive.google.com/file/d/1OvG1BBIlGjohW0SecAku_wbBJYael6OS/view?usp=sharing>`
+▶️ **Demo video:** `https://drive.google.com/file/d/1OvG1BBIlGjohW0SecAku_wbBJYael6OS/view?usp=sharing`
 
 ---
 
