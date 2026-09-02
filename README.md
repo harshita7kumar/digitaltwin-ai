@@ -7,7 +7,7 @@ stations — rather than an idealized, uniformly-instrumented one.
 **Round 2 submission.** Full write-up: [`docs/DigitalTwin_Business_Proposal.docx`](docs/DigitalTwin_Business_Proposal.docx)
 (also available as [PDF](docs/DigitalTwin_Business_Proposal.pdf)).
 
-▶️ **Demo video:** `<insert link here after recording — see docs/demo_video_script.md for the shot list>`
+▶️ **Demo video:** `<https://drive.google.com/file/d/1OvG1BBIlGjohW0SecAku_wbBJYael6OS/view?usp=sharing>`
 
 ---
 
@@ -108,8 +108,7 @@ digitaltwin-ai/
     ├── DigitalTwin_Business_Proposal.pdf    same, as PDF
     ├── architecture_diagram.png             reference architecture figure (Figure 1 in the proposal)
     ├── gen_diagram.py                       regenerates the architecture diagram
-    ├── gen_proposal.js                      regenerates the .docx (docx-js)
-    └── demo_video_script.md                 shot-by-shot script for the demo video
+    └── gen_proposal.js                      regenerates the .docx (docx-js)
 ```
 
 ---
@@ -138,12 +137,4 @@ why cohort-level + unit-level root-cause ranking, integration approach, phased r
 
 ---
 
-## Extending this
 
-- Swap `src/line_config.py` for a real line's topology — the modeling modules are written against the
-  `Station` dataclass and don't assume the specific 40-station reference layout.
-- Replace `src/simulate_line.py`'s output with a real OT feed shaped the same way
-  (`unit_id, station_id, cycle_time, vibration, torque, temperature, checklist_pass, shift`) and the rest
-  of the pipeline runs unmodified.
-- The dashboard is a single self-contained HTML file (Chart.js via CDN, no build step) — edit
-  `dashboard/index_template.html` and re-run the injection script above.

@@ -134,9 +134,8 @@ const cover = [
     text: "A reference solution design, phased rollout plan, and a working prototype demonstrating the core predictive mechanism (bottleneck forecasting, defect early-warning, and root-cause traceback) on a simulated 40-station mixed-model assembly line with realistically uneven sensor coverage.",
     size: 21, color: "333333",
   })] }),
-  new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: "Prepared for: Plant Operations & Engineering Leadership", size: 20, color: "333333" })] }),
-  new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: "Date: August 2026", size: 20, color: "333333" })] }),
-  new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: "Repository: <insert GitHub URL after publishing — see README.md>", size: 20, color: "333333", italics: true })] }),
+  new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: "Accenture Innovation Challenge", size: 20, color: "333333" })] }),
+  new Paragraph({ spacing: { after: 400 }, children: [new TextRun({ text: "Repository: <https://github.com/harshita7kumar/digitaltwin-ai — see README.md>", size: 20, color: "333333", italics: true })] }),
   new Paragraph({
     spacing: { before: 1200 },
     border: { top: { color: "C9D2DC", space: 8, style: BorderStyle.SINGLE, size: 6 } },

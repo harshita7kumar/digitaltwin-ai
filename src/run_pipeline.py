@@ -114,9 +114,17 @@ def main():
     export = build_dashboard_export(line, events, gt, rollup, bottleneck_df, latest_manual_risk,
                                      cohort_rank, topk, ew, sweep)
     export = _sanitize_nans(json.loads(json.dumps(export, default=_json_default)))
-    with open("../dashboard/dashboard_data.json", "w") as f:
+
+    from pathlib import Path
+
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DASHBOARD_DIR = PROJECT_ROOT / "dashboard"
+    DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
+
+    with open(DASHBOARD_DIR / "dashboard_data.json", "w") as f:
         json.dump(export, f, indent=2)
-    print("\nExported ../dashboard/dashboard_data.json")
+
+    print(f"\nExported {DASHBOARD_DIR / 'dashboard_data.json'}")
 
 
 def _sanitize_nans(obj):
